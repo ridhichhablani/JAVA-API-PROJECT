@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Authentication</title>
+</head>
+<body>
+    <h1>User Authentication</h1>
+    <div id="login-section">
+        <h2>Login</h2>
+        <form id="login-form">
+            <label for="login_id">Login ID:</label>
+            <input type="text" id="login_id" required><br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" required><br>
+            <button type="button" onclick="login()">Login</button>
+        </form>
+    </div>
+    <div id="customer-list-section" style="display: none;">
+        <h2>Customer List</h2>
+        <button onclick="showAddCustomer()">Add New Customer</button>
+        <button onclick="toggleCustomerList()">View Customer List</button>
+        <div id="customer-table-container">
+            <!-- Customer table will be displayed here -->
+        </div>
+    </div>
+    <div id="add-customer-section" style="display: none;">
+        <h2>Add New Customer</h2>
+        <form id="customer-form">
+            <label for="first_name">First Name:</label>
+            <input type="text" id="first_name" required><br>
+            <label for="last_name">Last Name:</label>
+            <input type="text" id="last_name" required><br>
+            <label for="street">Street:</label>
+            <input type="text" id="street" required><br>
+            <label for="address">Address:</label>
+            <input type="text" id="address" required><br>
+            <label for="city">City:</label>
+            <input type="text" id="city" required><br>
+            <label for="state">State:</label>
+            <input type="text" id="state" required><br>
+            <label for="email">Email:</label>
+            <input type="email" id="email" required><br>
+            <label for="phone">Phone:</label>
+            <input type="tel" id="phone" required><br>
+            <button type="button" onclick="addCustomer()">Add Customer</button>
+        </form>
+    </div>
+
+    <script>
+        const apiBaseUrl = "https://qa2.sunbasedata.com/sunbase/portal/api/";
+        let token = null;
+        let isCustomerListVisible = false;
+
+        function login() {
+            const login_id = document.getElementById("login_id").value;
+            const password = document.getElementById("password").value;
+
+            // Simulate successful authentication with provided credentials
+            if (login_id === "test@sunbasedata.com" && password === "Test@1234") {
+                token = "a_correct_bearer_token"; // Store the token for API calls
+                showCustomerListSection();
+            } else {
+                alert("Invalid credentials. Please enter valid login ID and password.");
+            }
+        }
+
+        function showCustomerListSection() {
+            hideAllSections();
+            document.getElementById("customer-list-section").style.display = "block";
+            if (isCustomerListVisible) {
+                viewCustomerList(); // Show customer list when the section is displayed
+            }
+        }
+
+        function showAddCustomer() {
+            hideAllSections();
+            document.getElementById("add-customer-section").style.display = "block";
+        }
+
+        function hideAllSections() {
+            document.getElementById("login-section").style.display = "none";
+            document.getElementById("customer-list-section").style.display = "none";
+            document.getElementById("add-customer-section").style.display = "none";
+        }
+
+        function toggleCustomerList() {
+            isCustomerListVisible = !isCustomerListVisible;
+            if (isCustomerListVisible) {
+                viewCustomerList();
+            } else {
+                document.getElementById("customer-table-container").innerHTML = "";
+            }
+        }
+
+        function viewCustomerList() {
+            // Simulate API call to get customer list
+            fetch(apiBaseUrl + "assignment.jsp?cmd=get_customer_list", {
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch customer list!");
+                }
+                return response.json();
+            })
+            .then(customers => {
+                // Display customer list in the table
+                const customerTable = document.createElement("table");
+                customerTable.innerHTML = `
+                    <tr>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Street</th>
+                        <th>Address</th>
+                        <th>City</th>
+                        <th>State</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Action</th>
+                    </tr>
+                `;
+
+                customers.forEach(customer => {
+                    const row = customerTable.insertRow();
+                    row.insertCell().innerText = customer.first_name;
+                    row.insertCell().innerText = customer.last_name;
+                    row.insertCell().innerText = customer.street;
+                    row.insertCell().innerText = customer.address;
+                    row.insertCell().innerText = customer.city;
+                    row.insertCell().innerText = customer.state;
+                    row.insertCell().innerText = customer.email;
+                    row.insertCell().innerText = customer.phone;
+
+                    // Action column with edit and remove icons
+                    const actionsCell = row.insertCell();
+                    actionsCell.innerHTML = `
+                        <i class="fa fa-pencil" onclick="editCustomer(${customer.id})"></i>
+                        <i class="fa fa-trash" onclick="deleteCustomer(${customer.id})"></i>
+                    `;
+                });
+
+                // Clear previous table and append the new one
+                const customerTableContainer = document.getElementById("customer-table-container");
+                customerTableContainer.innerHTML = "";
+                customerTableContainer.appendChild(customerTable);
+            })
+            .catch(error => {
+                console.error(error);
+                alert("Failed to fetch customer list!");
+            });
+        }
+
+        function addCustomer() {
+            const customerData = {
+                "first_name": document.getElementById("first_name").value,
+                "last_name": document.getElementById("last_name").value,
+                "street": document.getElementById("street").value,
+                "address": document.getElementById("address").value,
+                "city": document.getElementById("city").value,
+                "state": document.getElementById("state").value,
+                "email": document.getElementById("email").value,
+                "phone": document.getElementById("phone").value
+            };
+
+            // Simulate API call to create a new customer
+            fetch(apiBaseUrl + "assignment.jsp?cmd=create", {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(customerData)
+            })
+            .then(response => {
+                if (response.status === 201) {
+                    alert("Successfully created the customer.");
+                    toggleCustomerList(); // Show customer list after adding
+                } else if (response.status === 400) {
+                    throw new Error("First Name or Last Name is missing.");
+                } else {
+                    throw new Error("Failed to create the customer.");
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert(error.message || "Failed to create the customer.");
+            });
+        }
+
+        function deleteCustomer(uuid) {
+            // Simulate API call to delete the customer
+            fetch(apiBaseUrl + `assignment.jsp?cmd=delete&uuid=${uuid}`, {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            })
+            .then(response => {
+                if (response.status === 200) {
+                    alert("Successfully deleted the customer.");
+                    viewCustomerList(); // Refresh the customer list after deletion
+                } else if (response.status === 400) {
+                    throw new Error("UUID not found.");
+                } else {
+                    throw new Error("Error: Customer not deleted.");
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert(error.message || "Error: Customer not deleted.");
+            });
+        }
+
+        function editCustomer(uuid) {
+            // Implement the edit customer functionality here
+            // You can use a similar approach as in addCustomer function
+            // The API endpoint and method for updating a customer are already provided in the assignment.
+            // You need to send a PUT request to the API with the updated customer details.
+            // On success, you can show a success message and refresh the customer list.
+        }
+    </script>
+</body>
+</html>
